@@ -29,77 +29,67 @@
 
 # In[514]:
 
+"""
+As a best practice always put imports at the top of the file.
+It often aids readability to organize imports by type and project.
+For example, core python vs. established packages vs. utilities.
+"""
+
+
+import decimal
 
 import pandas as pd
-import matplotlib.pyplot as plt
-from sklearn.preprocessing import Imputer
 import numpy as np
-import matplotlib.mlab as mlab
-import scipy.stats as stats
-import seaborn as sns
+
 from scipy import stats
 
+from sklearn.preprocessing import Imputer
+from sklearn import preprocessing
 
-# In[515]:
-
-
-train_data_=train_data
-
-
-# In[516]:
+import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
+import seaborn as sns
 
 
-raw_data = pd.read_csv("Kaggle_Training_Dataset_v2.csv")
+# # Data
 
-train_data = (raw_data
-              .drop(raw_data.index[len(raw_data)-1])# drop invalid last row
-              .replace(['Yes', 'No'], [1, 0]))   # make yes/no numeric
+# Good to separate config / constants out
+backorder_file = 'Kaggle_Training_Dataset_v2.csv'
+orders = pd.read_csv(backorder_file, skipfooter=1)
 
-train_data.tail()
+"""
+"orders" or some other name is preferable to "orders" because if you train
+a supervised learning model, you'll likely split up the data set into at least
+a training set and a test set, which makes the "orders" name confusing.
+"""
 
+orders.tail()
+orders.info()
+orders.describe()
 
-# In[517]:
+# # Data Preparation
 
-
-#data Information
-train_data.info()
-
-
-# In[518]:
-
-
-#data description
-train_data.describe()
-
-
-# In[519]:
-
-
-#missing values in product
-train_data.sku.isnull().sum()
-
+orders = orders.replace(['Yes', 'No'], [1, 0])
 
 # In[520]:
 
-
 #missing value 
-train_data.isnull().sum()
-
+orders.isnull().sum()
 
 # In[524]:
-
 
 #replacing -99 missing values to median
 imp=Imputer(missing_values=-99,strategy='median')
 for data in ['perf_6_month_avg','perf_12_month_avg']:
-    train_data[data] = imp.fit_transform(train_data[data].values.reshape(-1, 1))
+    orders[data] = imp.fit_transform(orders[data].values.reshape(-1, 1))
 
+
+# # EDA
 
 # In[525]:
 
-
 #backorder ratio
-prob=len(train_data[train_data.went_on_backorder==1])/len(train_data.sku)
+prob=len(orders[orders.went_on_backorder==1])/len(orders.sku)
 print((prob*100),'%')
 
 
@@ -110,13 +100,13 @@ print((prob*100),'%')
 # In[25]:
 
 
-n_null_leadTime = train_data[train_data['lead_time'].isnull()].shape[0]
+n_null_leadTime = orders[orders['lead_time'].isnull()].shape[0]
 print(n_null_leadTime)
-n_non_null_leadTime = train_data[train_data['lead_time'].notnull()].shape[0]
+n_non_null_leadTime = orders[orders['lead_time'].notnull()].shape[0]
 print(n_non_null_leadTime)
-n_null_leadTime_backorders =sum(train_data[np.isnan(train_data["lead_time"])]["went_on_backorder"])
+n_null_leadTime_backorders =sum(orders[np.isnan(orders["lead_time"])]["went_on_backorder"])
 print (n_null_leadTime_backorders)
-n_non_null_leadTime_backorders = sum(train_data[pd.notnull(train_data["lead_time"])]["went_on_backorder"])
+n_non_null_leadTime_backorders = sum(orders[pd.notnull(orders["lead_time"])]["went_on_backorder"])
 print  (n_non_null_leadTime_backorders)
 
 null_leadTime_backorder_ratio = n_null_leadTime_backorders / float(n_null_leadTime)
@@ -135,15 +125,39 @@ print('Proportion of orders that “went_on_backorder” for missing lead_time r
 
 
 #coorelation between lead time and wen on backorder
-scores = train_data[['lead_time','went_on_backorder']]
-sns.countplot(x="lead_time", hue="went_on_backorder", data=scores, palette={1: "r", 0: "g"})
+""" 
+"Relationship" would be a better word here than correlation
+Although in plain language correlation makes sense, when doing
+analysis "correlation" refers to a specific statistical measure
+and it's good to stick to the correct usage to not confuse others.
+
+And the definition of "scores" isn't necessary.
+"""
+sns.countplot(x="lead_time", hue="went_on_backorder", data=orders, palette={1: "r", 0: "g"})
 plt.show()
+
+"""
+Look at the difference between the plot above and the code below
+creates. I'd argue the one below is much more readable because
+it allows me to compare distribution in lead_time by whether or
+not a product went_on_backorder. For the plot above, my eyes
+simply aren't good enough to read the plot because the scales (both
+on the x-axis and y-axis) are so different. There are, of course,
+downsides to KDE plots as opposed to histograms, but in most cases
+when comparing distributions KDE's are much easier to read than
+histograms. Histograms tend to be preferable only when it's important
+to be able to read the actual count off a plot.
+
+Are there any points that jump out to you based on the plot below?
+I saw one that piqued my interest ...
+"""
+sns.kdeplot(orders[(orders['went_on_backorder'] == 0) & (orders['lead_time'] < 20)]['lead_time'], shade=True
+sns.kdeplot(orders[(orders['went_on_backorder'] == 1) & (orders['lead_time'] < 20)]['lead_time'], shade=True)
 
 
 # In[534]:
 
-
-from sklearn import preprocessing
+# I'm not sure what you're trying to show here ...
 transfer_lead = preprocessing.scale(np.sqrt(pd.notnull(scores['lead_time'])))
 sns.countplot(x=transfer_lead, hue="went_on_backorder", data=scores, palette={1: "r", 0: "g"})
 plt.show()
@@ -151,9 +165,15 @@ plt.show()
 
 # In[535]:
 
-
-import decimal
-b=train_data[['went_on_backorder','lead_time']]
+"""
+I recommend separating these 2 steps out and adding commentary.
+I know you know the answers to the following questions, but ...
+- Why look at this in the first place?
+- What does the relationship imply?
+- Are there funny points? What do they mean? How should they be handled?
+- Based on your conclusion, might you improve your analysis of the relationship?
+"""
+b=orders[['went_on_backorder','lead_time']]
 backorder=b[b.went_on_backorder==1]
 no_backorder=b[b.went_on_backorder==0]
 lead_b=backorder.lead_time.value_counts()
@@ -187,7 +207,7 @@ df1
 # In[536]:
 
 
-sales_data=train_data
+sales_data=orders
 total_sales=(sales_data.sales_1_month+sales_data.sales_3_month+sales_data.sales_6_month+sales_data.sales_9_month)
 sales_data['total_sales']=total_sales
 reduced_data=sales_data.sort_values('total_sales',ascending = False)
@@ -195,6 +215,26 @@ reduced_data=sales_data.sort_values('total_sales',ascending = False)
 plt.plot(np.array(range(len(reduced_data))) * 0.28, reduced_data.total_sales,".",color="green")
 plt.title('Total sales count')
 plt.show()
+
+
+"""
+Don't be shy about manipulating a data frame. It can become expensive to make
+many copies of a data frame. Pandas will try to use references and avoid
+unnecessary copying, but even in the situations where pandas gets that right
+for your sake, it's *usually* easier to modify one dataframe than lots of
+slightly difference dataframes.
+
+See below for another representation that I'd argue is more readable than
+the plot above. Does the log-scale transformation make sense? 
+
+Also, when I read the data dictionary, it looks to me like the sales_9_month
+is *cumulative* i.e. all of the last 9 monts of sales, so I don't think the
+'total_sales' column is necessary.
+"""
+train_data['total_sales'] = train_data.sales_1_month + train_data.sales_3_month + train_data.sales_6_month + train_data.sales_9_month
+sns.kdeplot(np.log(train_data['total_sales']), shade=True)
+
+
 
 
 # In[537]:
