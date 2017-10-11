@@ -240,6 +240,14 @@ sns.kdeplot(np.log(train_data['total_sales']), shade=True)
 # In[537]:
 
 
+"""
+This could probably either be condensed or could use some editorializing.
+If all you want to demonstrate is the data reduction aspect, you can
+do that with 1 plot of # of products vs. total sales, rather than 3.
+If you're getting at something further with these plots, some Q&A would
+help me (or the reader) follow along.
+"""
+
 #correlation between sales and backorder
 
 sw=reduced_data[['went_on_backorder','total_sales']]
@@ -353,6 +361,25 @@ plt.ylabel('forecast')
 plt.show()
 #b[['total_sales','total_forecast']].tail(70)
 
+
+
+"""
+I'm not quite sure what you're going after here, but I'm going to guess
+and give you my thoughts. 
+
+When you want to sqrt transform a distribution
+it isn't necessary to fit a scaler, unless your intention is to wrap
+it up all in a sklearn pipeline.
+
+In general, transformations (Box-Cox or otherwise) are best used only
+if you need the transformation. For plots, a Box-Cox transformation
+makes the plot *very* difficult for someone else to read. Where, as
+an alternative, most statisticians and scientists will happily read
+a log plot. For models, "normalizing" transforms like Box-Cox will be
+important for some models (like linear models) but not for others like
+tree-based models.
+
+"""
 
 # 
 # 
