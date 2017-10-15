@@ -27,14 +27,7 @@
 # ##### Data Visualization
 # For data visualization I use transformation(square root) thats appropriate for heavy tailed data.
 
-# In[514]:
-
-"""
-As a best practice always put imports at the top of the file.
-It often aids readability to organize imports by type and project.
-For example, core python vs. established packages vs. utilities.
-"""
-
+# In[56]:
 
 import decimal
 
@@ -51,32 +44,44 @@ import matplotlib.mlab as mlab
 import seaborn as sns
 
 
-# # Data
+# In[57]:
 
-# Good to separate config / constants out
-backorder_file = 'Kaggle_Training_Dataset_v2.csv'
-orders = pd.read_csv(backorder_file, skipfooter=1)
+#train_data_=train_data
 
-"""
-"orders" or some other name is preferable to "orders" because if you train
-a supervised learning model, you'll likely split up the data set into at least
-a training set and a test set, which makes the "orders" name confusing.
-"""
+
+# In[58]:
+
+backorder_file = pd.read_csv("Kaggle_Training_Dataset_v2.csv")
+
+orders = (backorder_file
+              .drop(backorder_file.index[len(backorder_file)-1])# drop invalid last row
+              .replace(['Yes', 'No'], [1, 0]))               # make yes/no numeric
+
+
+# In[59]:
 
 orders.tail()
+#data Information
 orders.info()
+#data description
 orders.describe()
 
-# # Data Preparation
 
-orders = orders.replace(['Yes', 'No'], [1, 0])
+# ### Data Preparation
 
-# In[520]:
+# In[60]:
+
+#missing values in product
+orders.sku.isnull().sum()
+
+
+# In[61]:
 
 #missing value 
 orders.isnull().sum()
 
-# In[524]:
+
+# In[62]:
 
 #replacing -99 missing values to median
 imp=Imputer(missing_values=-99,strategy='median')
@@ -84,95 +89,60 @@ for data in ['perf_6_month_avg','perf_12_month_avg']:
     orders[data] = imp.fit_transform(orders[data].values.reshape(-1, 1))
 
 
-# # EDA
+# ### EDA
 
-# In[525]:
+# In[88]:
 
 #backorder ratio
 prob=len(orders[orders.went_on_backorder==1])/len(orders.sku)
 print((prob*100),'%')
+print(len(orders[orders.went_on_backorder==1]))
 
 
 # check the missing data in lead time to replace it or not?
 # 1. Proportion of orders that “went_on_backorder” for missing lead_time records
 # 2. Proportion of orders that “went_on_backorder” for non-null lead_time records
 
-# In[25]:
-
+# In[98]:
 
 n_null_leadTime = orders[orders['lead_time'].isnull()].shape[0]
-print(n_null_leadTime)
+print ('number of orders with missing lead time:', orders[orders['lead_time'].isnull()].shape[0])
 n_non_null_leadTime = orders[orders['lead_time'].notnull()].shape[0]
-print(n_non_null_leadTime)
+print ('number of orders without missing lead time:',orders[orders['lead_time'].notnull()].shape[0])
 n_null_leadTime_backorders =sum(orders[np.isnan(orders["lead_time"])]["went_on_backorder"])
-print (n_null_leadTime_backorders)
+print ('Number of backordered products with misssing lead time:', n_null_leadTime_backorders)
 n_non_null_leadTime_backorders = sum(orders[pd.notnull(orders["lead_time"])]["went_on_backorder"])
-print  (n_non_null_leadTime_backorders)
+print  ('Number of backordered products without misssing lead time:',n_non_null_leadTime_backorders)
+print ('Total orders went on backorders:',n_null_leadTime_backorders+ n_non_null_leadTime_backorders)
 
 null_leadTime_backorder_ratio = n_null_leadTime_backorders / float(n_null_leadTime)
 non_null_leadTime_backorder_ratio = n_non_null_leadTime_backorders / float(n_non_null_leadTime)
-print('Proportion of orders that “went_on_backorder” for no missing lead_time records:',non_null_leadTime_backorder_ratio * 100)
-print('Proportion of orders that “went_on_backorder” for missing lead_time records:', null_leadTime_backorder_ratio * 100)
+print('Proportion of orders without missing lead time that went_on_backorder:',non_null_leadTime_backorder_ratio * 100)
+print('Proportion of orders with missing lead_time that went_on_backorder :', null_leadTime_backorder_ratio * 100)
 
 
-# Based on the proportion of orders for missing lead_time_ time of orders went backorder, we can see that the result is 50% less 
-# than proportion of lead time without missing values, and our total went backorder proportion is around 0.66 and it is close to 
-# proportion of orders that went back order for non missing values. 
-# Therefore i decided to not replacing the missing data 
-# below we can see the lead time plot and went_backorder type.
+# Based on the above calculations the proportion of backordered products with missing lead time is 50% less than those without missing lead time.
+# The proportion of backordere products with missing lead time is half of the products with no missing values, therefore I decided not to replace the missing data in lead time and not dropiing them.
+# Plot below shows the density of products for a given lead time that went on backorder and did not go on backorder.
 
-# In[531]:
+# In[100]:
 
-
-#coorelation between lead time and wen on backorder
-""" 
-"Relationship" would be a better word here than correlation
-Although in plain language correlation makes sense, when doing
-analysis "correlation" refers to a specific statistical measure
-and it's good to stick to the correct usage to not confuse others.
-
-And the definition of "scores" isn't necessary.
-"""
-sns.countplot(x="lead_time", hue="went_on_backorder", data=orders, palette={1: "r", 0: "g"})
-plt.show()
-
-"""
-Look at the difference between the plot above and the code below
-creates. I'd argue the one below is much more readable because
-it allows me to compare distribution in lead_time by whether or
-not a product went_on_backorder. For the plot above, my eyes
-simply aren't good enough to read the plot because the scales (both
-on the x-axis and y-axis) are so different. There are, of course,
-downsides to KDE plots as opposed to histograms, but in most cases
-when comparing distributions KDE's are much easier to read than
-histograms. Histograms tend to be preferable only when it's important
-to be able to read the actual count off a plot.
-
-Are there any points that jump out to you based on the plot below?
-I saw one that piqued my interest ...
-"""
-sns.kdeplot(orders[(orders['went_on_backorder'] == 0) & (orders['lead_time'] < 20)]['lead_time'], shade=True
-sns.kdeplot(orders[(orders['went_on_backorder'] == 1) & (orders['lead_time'] < 20)]['lead_time'], shade=True)
-
-
-# In[534]:
-
-# I'm not sure what you're trying to show here ...
-transfer_lead = preprocessing.scale(np.sqrt(pd.notnull(scores['lead_time'])))
-sns.countplot(x=transfer_lead, hue="went_on_backorder", data=scores, palette={1: "r", 0: "g"})
+#Relationship between lead time and went on backorder
+sns.kdeplot(orders[(orders['went_on_backorder'] == 0) & (orders['lead_time'] < 20)]['lead_time'],color='b', shade=True,label='not went on backorder')
+sns.kdeplot(orders[(orders['went_on_backorder'] == 1) & (orders['lead_time'] < 20)]['lead_time'], color='r',shade=True,label='went on backorder')
+plt.title('Lead Time vs backorder')
 plt.show()
 
 
-# In[535]:
+# I can see that both lead time with back order and not backorder both peak for the same Lead time. However, the backorder graph is lower than no backorder graph.
+# Therefore I am going to see if lead time and went on backorder are independent or dependent from each other.
+# the next step is looking at the relationship between lead time and fraction of products that went on backorder to see how lead time changes the probability of went to backorder.
 
-"""
-I recommend separating these 2 steps out and adding commentary.
-I know you know the answers to the following questions, but ...
-- Why look at this in the first place?
-- What does the relationship imply?
-- Are there funny points? What do they mean? How should they be handled?
-- Based on your conclusion, might you improve your analysis of the relationship?
-"""
+# Plot below shows the relation between lead time and the fraction of backorder. The following plot shows with longer lead time, backorder proportion goes down.
+
+# In[101]:
+
+import decimal
 b=orders[['went_on_backorder','lead_time']]
 backorder=b[b.went_on_backorder==1]
 no_backorder=b[b.went_on_backorder==0]
@@ -204,49 +174,42 @@ print(c)
 df1
 
 
-# In[536]:
+# In the above plot, two outlier are noticed. one is at lead time=11 and one at lead time 52. 
+# for the point on 52 I belive there was not enough records to show the rest of point between17 to 52.
+# the point at lead time 11 should be given special attention till its cause is known.
+# fo this reason I am going to calulate the probability bionomial distribution.
+
+# In[18]:
+
+from scipy.stats import binom
+import math
+s = binom.pmf(19, 1094,0.01)
+print(s)
+sd=math.sqrt(1094 * 0.01 * (1 - 0.01))
+print("Standard deviation ",sd)
+print ((19 - 10.94)/sd)
 
 
-sales_data=orders
-total_sales=(sales_data.sales_1_month+sales_data.sales_3_month+sales_data.sales_6_month+sales_data.sales_9_month)
-sales_data['total_sales']=total_sales
-reduced_data=sales_data.sort_values('total_sales',ascending = False)
+# As you see from the above calculations standard deviation of bionomial distribution is 3.23 standard deviation from the mean so I am going to ignore this point 
 
-plt.plot(np.array(range(len(reduced_data))) * 0.28, reduced_data.total_sales,".",color="green")
-plt.title('Total sales count')
+# ### Data Reduction:
+# Cumulative percentage is one way of expressing frequency distribution. 
+# 
+
+# In[68]:
+
+sales_sort=orders.sort_values('sales_9_month',ascending = False)
+sns.kdeplot(np.log(sales_sort['sales_9_month']),color='m', shade=True)
 plt.show()
 
 
-"""
-Don't be shy about manipulating a data frame. It can become expensive to make
-many copies of a data frame. Pandas will try to use references and avoid
-unnecessary copying, but even in the situations where pandas gets that right
-for your sake, it's *usually* easier to modify one dataframe than lots of
-slightly difference dataframes.
+# In[70]:
 
-See below for another representation that I'd argue is more readable than
-the plot above. Does the log-scale transformation make sense? 
-
-Also, when I read the data dictionary, it looks to me like the sales_9_month
-is *cumulative* i.e. all of the last 9 monts of sales, so I don't think the
-'total_sales' column is necessary.
-"""
-train_data['total_sales'] = train_data.sales_1_month + train_data.sales_3_month + train_data.sales_6_month + train_data.sales_9_month
-sns.kdeplot(np.log(train_data['total_sales']), shade=True)
-
-
-
-
-# In[537]:
-
-
-#correlation between sales and backorder
-
-sw=reduced_data[['went_on_backorder','total_sales']]
-backorder_sales=sw[sw.went_on_backorder==1]
-no_backorder_sales=sw[sw.went_on_backorder==0]
-sales_b=backorder_sales.total_sales.value_counts()
-sales_n=no_backorder_sales.total_sales.value_counts()
+#relationship between sales and backorder
+backorder_sales=sales_sort[sales_sort.went_on_backorder==1]
+no_backorder_sales=sales_sort[sales_sort.went_on_backorder==0]
+sales_b=backorder_sales.sales_9_month.value_counts()
+sales_n=no_backorder_sales.sales_9_month.value_counts()
 g=[]
 df2 = pd.DataFrame(
     {
@@ -273,38 +236,44 @@ plt.show()
 
 # Data reduction by capture 60% of the total sales volume.
 
-# In[395]:
+# In[71]:
 
-
-sales_volume =np.cumsum(sample_data.total_sales)
+sales_volume =np.cumsum(sales_sort.sales_9_month)
 print(sales_volume[len(sales_volume)-1])
 print(0.6 * sales_volume[len(sales_volume)-1])
-plt.plot(np.array(range(len(sample_data))) * 0.28, sales_volume,".",color="orange")
+plt.plot(np.array(range(len(sales_sort))) * 0.28, sales_volume,".",color="orange")
 plt.title('Total sales volume')
 
 plt.show()
 
 
-# In[407]:
+# In[82]:
 
-
-a=sample_data
 volume_perc=0.6 * sales_volume[len(sales_volume)-1]
 print(volume_perc)
 print(sales_volume[len(sales_volume)-1])
-a['sales_volume']=sales_volume
+sales_sort['sales_volume']=sales_volume
 
-a=a.sort_values('sales_volume',ascending = True)
-a=a[a['sales_volume']<=volume_perc]
+sales_sort=sales_sort.sort_values('sales_volume',ascending = True)
+sales_sort=sales_sort[sales_sort['sales_volume']<=volume_perc]
 
-a=a.sort_values('total_sales',ascending = False)
-plt.plot(np.array(range(len(a))) * 0.28, a.total_sales,".",color="green")
+sales_sort=sales_sort.sort_values('sales_9_month',ascending = False)
+plt.plot(np.array(range(len(sales_sort))) * 0.28, sales_sort.sales_9_month,".",color="green")
 plt.title('Total sales count')
 plt.show()
-len(a)
+len(sales_sort)
 
 
-# So with capturing 60 % total sales volume ,data is reduced to 7509 rows.
+# So with capturing 60% total sales volume ,data is reduced to 7509 rows.
+
+# In[85]:
+
+print(sum(sales_sort[np.isnan(sales_sort["lead_time"])]["went_on_backorder"]))
+print(sum(sales_sort.lead_time.isnull()))
+print (sum(sales_sort[np.isnan(sales_sort["lead_time"])]["sales_9_month"]))
+print (sum(sales_sort.sales_9_month))
+print ((a/b)*100)
+
 
 # How common are backorders? Given that, how likely are backorders based on the part risk flags? 
 # And how prevalent are they? 
@@ -325,70 +294,62 @@ len(a)
 # 
 # ppap_risk - Part risk flag
 
-# In[419]:
+# In[105]:
+
+print(np.corrcoef(orders.potential_issue,orders.pieces_past_due))
+print('Source issue for part identified correlation with backorder',np.corrcoef(orders.potential_issue,orders.went_on_backorder))
+print('Parts overdue from source correlation with backorder', np.corrcoef(orders.went_on_backorder,orders.pieces_past_due))
+print('Amount of stock orders overdue correlation with backorder',np.corrcoef(orders.went_on_backorder,orders.local_bo_qty))
+print('oe_constraint - Part risk flag correlation with backorder',np.corrcoef(orders.went_on_backorder,orders.oe_constraint))
+print('ppap_risk - Part risk flag correlation with backorder', np.corrcoef(orders.went_on_backorder,orders.ppap_risk))
+print('Total sales for perior 9,6,3 and 1 month correlation with backorder',np.corrcoef(orders.went_on_backorder,orders.sales_9_month))
+print('Total Forecast sales - Part risk flag correlation with backorder',np.corrcoef(orders.went_on_backorder,orders.forecast_9_month))
+print('Total Forecast sales - Total Sales',np.corrcoef(orders.sales_9_month,orders.forecast_9_month))
 
 
-total_forecast=(a.forecast_3_month+a.forecast_6_month+a.forecast_9_month)
-a['total_forecast']=total_forecast
-print(np.corrcoef(a.potential_issue,a.pieces_past_due))
-print('Source issue for part identified correlation with backorder',np.corrcoef(a.potential_issue,a.went_on_backorder))
-print('Parts overdue from source correlation with backorder', np.corrcoef(a.went_on_backorder,a.pieces_past_due))
-print('Amount of stock orders overdue correlation with backorder',np.corrcoef(a.went_on_backorder,a.local_bo_qty))
-print('oe_constraint - Part risk flag correlation with backorder',np.corrcoef(a.went_on_backorder,a.oe_constraint))
-print('ppap_risk - Part risk flag correlation with backorder', np.corrcoef(a.went_on_backorder,a.ppap_risk))
-print('Total sales for perior 9,6,3 and 1 month correlation with backorder',np.corrcoef(a.went_on_backorder,a.total_sales))
-print('Total Forecast sales - Part risk flag correlation with backorder',np.corrcoef(a.went_on_backorder,a.total_forecast))
-print('Transit time-Lead time - Part risk flag correlation with backorder', np.corrcoef(a.went_on_backorder,a.lead_time))
-print('Total Forecast sales - Total Sales',np.corrcoef(a.total_sales,a.total_forecast))
+# In[106]:
 
-
-# In[461]:
-
-
-b=a.sort_values('total_sales',ascending = True)
-plt.plot((b.total_sales), a.total_forecast,"*",color='darkblue')
+orders=orders.sort_values('sales_9_month',ascending = True)
+plt.plot((orders.sales_9_month), orders.forecast_9_month,".",color='darkblue')
 plt.title('total sales and total forecast')
 plt.xlabel('sales')
 plt.ylabel('forecast')
 plt.show()
-#b[['total_sales','total_forecast']].tail(70)
 
 
+# We should find out where actually the forecast was not right so that caused backorder?
+# because when saes go up forecast also should go up????
 # 
+
+# ## How predictable are sales?
 # 
-# The next raw uses scale method from scikit-learn to transform the distribution 
-# This will not impact Skewness Statistic calculation
-# We have included this for sake of completion
-# so here I compare three vesion of plots:Original,scale with sqr.
 
-# In[511]:
+# In[107]:
 
+#use hypothesis testing that sales doesnt effect backorder
+df_sales=orders
+sales123=df_sales.sales_3_month
+sales456=df_sales.sales_6_month-df_sales.sales_3_month
+sales789=df_sales.sales_9_month-df_sales.sales_6_month
 
-from scipy.stats import boxcox
-from sklearn import preprocessing
-from scipy.stats import skew
-leadTime = preprocessing.scale(np.sqrt(pd.notnull(a['lead_time'])))
+df_sales['sales123']=sales123
+df_sales['sales456']=sales456
+df_sales['sales789']=sales789
 
-#leadTimeBoxCox = preprocessing.scale(boxcox(pd.notnull(a['lead_time']+5))[0])
-leadTimeOrig = preprocessing.scale(pd.notnull(a['lead_time']))
-skness = skew(leadTime)
-#sknessBoxCox = skew(leadTimeBoxCox)
-sknessOrig = skew(leadTimeOrig)
+df_sales.head()
 
-
-#We draw the histograms 
-figure = plt.figure()
-figure.add_subplot(131)   
-plt.hist(leadTime,facecolor='red',alpha=0.5) 
-plt.xlabel("lead_time - Transformed(Using Sqrt)") 
-plt.title("Lead_time Histogram") 
-plt.text(2,1000,"Skewness: {0:.5f}".format(skness)) 
-
-
-figure.add_subplot(133) 
-plt.hist(AirTimeOrig,facecolor='green',alpha=0.5) 
-plt.xlabel("lead_time - Based on Original lead Times") 
-plt.title("lead_time Histogram - Right Skewed") 
-plt.text(2,1000,"Skewness: {0:.5f}".format(sknessOrig))
+sns.kdeplot(np.log(sales123),color='r', shade=True,label='sales in month 1,2, and 3')
+sns.kdeplot(np.log(sales123),color='b', shade=False,label='sales in month 4,5, and 6')
+sns.kdeplot(np.log(sales789),color='g', shade=False,label='sales in month 7,8, and 9')
 plt.show()
+
+
+# In[ ]:
+
+
+
+
+# In[ ]:
+
+
 
