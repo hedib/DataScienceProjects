@@ -2,7 +2,7 @@
 
 This repository includes different data science projects involving data wrangling, inferential statistics, exploratory analysis and machine learning modeling
 
-## The [project_Inventory folder](./project_Inventory) is the complete data science project. 
+## The [Capston_Project folder](./Capstone_Project) is the complete data science project. 
 Product backorders is a typical supply chain problem. Backordering happens when a customer places an order for a product that is temporarily out of stock with the vendor and order cannot be fulfilled. It is a dream for any business, but it is also a massive problem if we do not know how to handle it. 
 
 In this project, the goal is to identify the cause of backorder and use the past data around the backorders to develop a model to predict the probability of a product backorder. With the help of data analysis, a reasonable prediction on all products can go on backorders is expected. Such a prediction could immensely help the client to plan for a more efficient stocking and backorder handling. Goals of this project are:
