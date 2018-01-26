@@ -1,7 +1,6 @@
-## Data science projects involving Inferential Statistics, EDA, and machine learning modeling.
+# Data science projects involving Inferential Statistics, EDA, and machine learning modeling.
 
-## Data Science Projects
-This repository includes different data science projects involving data wrangling, Inferential statistics, exploratory analysis and machine learning modeling
+This repository includes different data science projects involving data wrangling, inferential statistics, exploratory analysis and machine learning modeling
 
 ## The [project_Inventory folder](./project_Inventory) is the complete data science project. 
 Product backorders is a typical supply chain problem. Backordering happens when a customer places an order for a product that is temporarily out of stock with the vendor and order cannot be fulfilled. It is a dream for any business, but it is also a massive problem if we do not know how to handle it. 
